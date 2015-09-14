@@ -15,9 +15,11 @@ public class Main {
 	 * @throws Exception 
 	 */
 	public static void main(String[] args) throws Exception {
-		PathParser parser =new PathParser(args[0]);
-		ArrayList<PathNode> poseList = parser.getPoseList();
-
+		PathParser parser = new PathParser(args[0]);
+		PathNode[] path = parser.getPath();
+		MyRobot robot = new MyRobot("http://127.0.0.1", 50000);
+		robot.setPath(path);
+		robot.run();
 	}
 
 }

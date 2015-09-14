@@ -1,111 +1,160 @@
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URL;
+import java.net.URLConnection;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Map;
+
+import javafx.geometry.Pos;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import given.DifferentialDriveRequest;
 import given.LocalizationResponse;
 import given.RobotCommunication;
 
 /**
- * TestRobot interfaces to the (real or virtual) robot over a network connection.
- * It uses Java -> JSON -> HttpRequest -> Network -> DssHost32 -> Lokarria(Robulab) -> Core -> MRDS4
+ * TestRobot interfaces to the (real or virtual) robot over a network
+ * connection. It uses Java -> JSON -> HttpRequest -> Network -> DssHost32 ->
+ * Lokarria(Robulab) -> Core -> MRDS4
  * 
  * @author thomasj
  */
-public class MyRobot
-{
-   private RobotCommunication robotcomm;  // communication drivers
+public class MyRobot {
 
-   /**
-    * Create a robot connected to host "host" at port "port"
-    * @param host normally http://127.0.0.1
-    * @param port normally 50000
-    */
-   public MyRobot(String host, int port)
-   {
-      robotcomm = new RobotCommunication(host, port);
-   }
+	private PathNode[] path;
+	private String host;
+	private int port;
+	private ObjectMapper mapper;
+	private RobotCommunication roboCom;
 
-   /**
-    * This simple main program creates a robot, sets up some speed and turning rate and
-    * then displays angle and position for 16 seconds.
-    * @param args         not used
-    * @throws Exception   not caught
-    */
-   public static void main(String[] args) throws Exception
-   {  
-	  
-      MyRobot robot = new MyRobot("http://127.0.0.1", 50000);
+	public MyRobot(String host, int port) {
+		this.host = host;
+		this.port = port;
+		mapper = new ObjectMapper();
+		roboCom = new RobotCommunication(host, port);
+	}
 
-      robot.run();
-   }
+	public void run() throws Exception {
+
+		
+		boolean done = false;
+		while(!done) {
+
+			double dToPath = 0;
+			double maxDToPath = dToPath;
+			
+			for (int i = 0; i < path.length - 1; i++) {
+				
+				Position p0 = path[i].pose.position;
+				Position p1 = path[i+1].pose.position;
+				dToPath = distanceToPath(getPosition(), p0, p1);
+				
+				if (dToPath > maxDToPath) {
+					maxDToPath = dToPath;
+				}
+			}
+			
+				
+			
+			
+		}
+		
+		
+	}
 
 
-   private void run() throws Exception
-   {
-      System.out.println("Creating response");
-      LocalizationResponse lr = new LocalizationResponse();
 
-      System.out.println("Creating request");
-      DifferentialDriveRequest dr = new DifferentialDriveRequest();
+	
+	private Position getPosition() throws Exception {
+		
+		LocalizationResponse r = new LocalizationResponse();
+		
+		roboCom.getResponse(r);
+		
+		Position p = new Position();
+		
+		double[] posArray = r.getPosition();
+		
+		p.x = posArray[0];
+		p.y = posArray[1];
+		
+		return p;
+		
+	}
 
-      // set up the request to move in a circle
-      dr.setAngularSpeed(Math.PI * 1.0);
-      dr.setLinearSpeed(0.8);
+	private double distanceToPath(Position p, Position p0, Position p1) {
+		
+		double vX = p1.x - p0.x;
+		double vY = p1.y - p0.y;
+		
+		double wX = p.x - p0.x;
+		double wY = p.y - p0.y;
+		
+		double c1 = wX*vX + wY*vY;
+		if (c1 <= 0) {
+			return p.getDistanceTo(p0);
+		}
+		
+		double c2 = vX*vX + vY*vY;
+		if ( c2 <= c1) {
+			return p.getDistanceTo(p1);
+		}
+		
+		double b = c1/c2;
+		
+		Position pB = new Position();
+		pB.x = p0.x + b*vX;
+		pB.y = p0.y + b*vY;
+		
+		return p.getDistanceTo(pB);
+	}
+	
+	public void followTheCarrot(){
+		
+		
+		
+		
+		
+		
+		
+		
+	}
+	
+	
+	
+	
+	
+	
+	
 
-      System.out.println("Start to move robot");
-      int rc = robotcomm.putRequest(dr);
-      System.out.println("Response code " + rc);
+	public void setPath(PathNode[] path) {
+		this.path = path;
+	}
 
-      for (int i = 0; i < 250; i++)
-      {
-         try
-         {
-            Thread.sleep(1000);
-         }
-         catch (InterruptedException ex) {}
+	/**
+	 * Extract the robot bearing from the response
+	 * 
+	 * @param lr
+	 * @return angle in degrees
+	 */
+	double getBearingAngle(LocalizationResponse lr) {
+		double e[] = lr.getOrientation();
 
-         // ask the robot about its position and angle
-         robotcomm.getResponse(lr);
+		double angle = 2 * Math.atan2(e[3], e[0]);
+		return angle * 180 / Math.PI;
+	}
 
-         //double angle = getBearingAngle(lr);
-         double angle = lr.getHeadingAngle();
-         System.out.println("bearing = " + angle * 180 / 3.1415926);
-
-         double [] position = getPosition(lr);
-         System.out.println("position = " + position[0] + ", " + position[1]); 
-      }
-
-      // set up request to stop the robot
-      dr.setLinearSpeed(0);
-      dr.setAngularSpeed(0);
-
-      System.out.println("Stop robot");
-      rc = robotcomm.putRequest(dr);
-      System.out.println("Response code " + rc);
-
-   }
-
-   /**
-    * Extract the robot bearing from the response
-    * @param lr
-    * @return angle in degrees
-    */
-   double getBearingAngle(LocalizationResponse lr)
-   {
-      double e[] = lr.getOrientation();
-
-      double angle = 2 * Math.atan2(e[3], e[0]);
-      return angle * 180 / Math.PI;
-   }
-
-   /**
-    * Extract the position
-    * @param lr
-    * @return coordinates
-    */
-   double[] getPosition(LocalizationResponse lr)
-   {
-      return lr.getPosition();
-   }
-
+	/**
+	 * Extract the position
+	 * 
+	 * @param lr
+	 * @return coordinates
+	 */
+	double[] getPosition(LocalizationResponse lr) {
+		return lr.getPosition();
+	}
 
 }
-
