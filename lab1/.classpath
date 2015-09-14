@@ -2,5 +2,8 @@
 <classpath>
 	<classpathentry kind="src" path="src"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="H:/edu/5DV121/mrds java/jackson-annotations-2.0.5.jar"/>
+	<classpathentry kind="lib" path="H:/edu/5DV121/mrds java/jackson-core-2.0.5.jar"/>
+	<classpathentry kind="lib" path="H:/edu/5DV121/mrds java/jackson-databind-2.0.5.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

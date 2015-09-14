@@ -1,3 +1,8 @@
+import java.io.FileNotFoundException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
 /**
  * 
  * @author dv13agl
@@ -7,9 +12,11 @@ public class Main {
 
 	/**
 	 * @param args
+	 * @throws Exception 
 	 */
-	public static void main(String[] args) {
-		System.out.println("Hello world!");
+	public static void main(String[] args) throws Exception {
+		PathParser parser =new PathParser(args[0]);
+		ArrayList<PathNode> poseList = parser.getPoseList();
 
 	}
 
