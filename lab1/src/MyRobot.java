@@ -43,26 +43,38 @@ public class MyRobot {
 		boolean done = false;
 		while(!done) {
 
-			double dToPath = 0;
-			double maxDToPath = dToPath;
+			PathNode[] closestSegment = getClosestSegment();
 			
-			for (int i = 0; i < path.length - 1; i++) {
-				
-				Position p0 = path[i].pose.position;
-				Position p1 = path[i+1].pose.position;
-				dToPath = distanceToPath(getPosition(), p0, p1);
-				
-				if (dToPath > maxDToPath) {
-					maxDToPath = dToPath;
-				}
-			}
-			
-				
+			done = true;
 			
 			
 		}
 		
 		
+	}
+
+	private PathNode[] getClosestSegment() throws Exception {
+		
+		double dToPath = distanceToPath(getPosition(), path[0].pose.position, path[1].pose.position);
+		double minDToPath = dToPath;
+		PathNode[] closestSegment = new PathNode[2];
+		closestSegment[0] = path[0];
+		closestSegment[1] = path[1];
+		
+		for (int i = 0; i < path.length - 1; i++) {
+			
+			Position p0 = path[i].pose.position;
+			Position p1 = path[i+1].pose.position;
+			dToPath = distanceToPath(getPosition(), p0, p1);
+							
+			if (dToPath < minDToPath) {
+				minDToPath = dToPath;
+				closestSegment[0] = path[i];
+				closestSegment[1] = path[i+1];
+			}
+		}
+		
+		return closestSegment;
 	}
 
 
