@@ -8,4 +8,9 @@ public class Pose {
 	@JsonProperty("Position")
 	public Position position;
 	
+	public Pose() {
+		this.orientation = new Orientation();
+		this.position = new Position();
+	}
+	
 }

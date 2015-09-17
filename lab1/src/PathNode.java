@@ -9,5 +9,11 @@ public class PathNode {
 	public String status;
 	@JsonProperty("Timestamp")
 	public String timestamp;
+	
+	public PathNode() {
+		this.pose = new Pose();
+		this.status = "DEFAULT";
+		this.timestamp = "0";
+	}
 
 }

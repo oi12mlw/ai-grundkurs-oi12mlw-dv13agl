@@ -15,5 +15,11 @@ public class Orientation {
 	@JsonProperty("Z")
 	public double z;
 	
+	public Orientation() {
+		x = 0;
+		y = 0;
+		z = 0;
+	}
+	
 
 }

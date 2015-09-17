@@ -29,12 +29,19 @@ public class MyRobot {
 	private int port;
 	private ObjectMapper mapper;
 	private RobotCommunication roboCom;
+	private Position position;
 
 	public MyRobot(String host, int port) {
 		this.host = host;
 		this.port = port;
+		this.position = new Position(0, 0);
 		mapper = new ObjectMapper();
 		roboCom = new RobotCommunication(host, port);
+	}
+	
+	public void setPosition(Position position)
+	{
+		this.position = position;
 	}
 
 	public void run() throws Exception {
@@ -44,6 +51,8 @@ public class MyRobot {
 		while(!done) {
 
 			PathNode[] closestSegment = getClosestSegment();
+			double dToClosestSegment = getDistanceToSegment(closestSegment);
+			//Position p = getCarrotPoint(closestSegment)
 			
 			done = true;
 			
@@ -53,9 +62,14 @@ public class MyRobot {
 		
 	}
 
-	private PathNode[] getClosestSegment() throws Exception {
+	double getDistanceToSegment(PathNode[] closestSegment) {
+		return distanceToPath(closestSegment[0].pose.position, closestSegment[1].pose.position);
 		
-		double dToPath = distanceToPath(getPosition(), path[0].pose.position, path[1].pose.position);
+	}
+
+	PathNode[] getClosestSegment() throws Exception {
+		
+		double dToPath = distanceToPath(path[0].pose.position, path[1].pose.position);
 		double minDToPath = dToPath;
 		PathNode[] closestSegment = new PathNode[2];
 		closestSegment[0] = path[0];
@@ -65,7 +79,7 @@ public class MyRobot {
 			
 			Position p0 = path[i].pose.position;
 			Position p1 = path[i+1].pose.position;
-			dToPath = distanceToPath(getPosition(), p0, p1);
+			dToPath = distanceToPath(p0, p1);
 							
 			if (dToPath < minDToPath) {
 				minDToPath = dToPath;
@@ -80,24 +94,28 @@ public class MyRobot {
 
 
 	
-	private Position getPosition() throws Exception {
+	private Position getPosition()  {
 		
 		LocalizationResponse r = new LocalizationResponse();
 		
-		roboCom.getResponse(r);
+		try {
+			roboCom.getResponse(r);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			return this.position;
+		}
 		
-		Position p = new Position();
 		
 		double[] posArray = r.getPosition();
-		
-		p.x = posArray[0];
-		p.y = posArray[1];
+		Position p = new Position(posArray[0], posArray[1]);
 		
 		return p;
 		
 	}
 
-	private double distanceToPath(Position p, Position p0, Position p1) {
+	private double distanceToPath(Position p0, Position p1) {
+		
+		Position p = getPosition();
 		
 		double vX = p1.x - p0.x;
 		double vY = p1.y - p0.y;
@@ -106,9 +124,11 @@ public class MyRobot {
 		double wY = p.y - p0.y;
 		
 		double c1 = wX*vX + wY*vY;
+		
 		if (c1 <= 0) {
 			return p.getDistanceTo(p0);
 		}
+		
 		
 		double c2 = vX*vX + vY*vY;
 		if ( c2 <= c1) {
@@ -117,30 +137,13 @@ public class MyRobot {
 		
 		double b = c1/c2;
 		
-		Position pB = new Position();
-		pB.x = p0.x + b*vX;
-		pB.y = p0.y + b*vY;
+		Position pB = new Position(p0.x + b*vX,  p0.y + b*vY);
+
 		
 		return p.getDistanceTo(pB);
 	}
 	
-	public void followTheCarrot(){
 		
-		
-		
-		
-		
-		
-		
-		
-	}
-	
-	
-	
-	
-	
-	
-	
 
 	public void setPath(PathNode[] path) {
 		this.path = path;
