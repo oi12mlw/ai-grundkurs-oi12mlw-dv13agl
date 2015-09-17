@@ -7,8 +7,6 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map;
 
-import javafx.geometry.Pos;
-
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import given.DifferentialDriveRequest;
@@ -51,8 +49,10 @@ public class MyRobot {
 		while(!done) {
 
 			PathNode[] closestSegment = getClosestSegment();
-			double dToClosestSegment = getDistanceToSegment(closestSegment);
-			//Position p = getCarrotPoint(closestSegment)
+			//double dToClosestSegment = getDistanceToSegment(closestSegment);			
+			Position p = getClosestPointOnSegement(closestSegment);
+			
+			System.out.println("Closest point: " + p.toString());
 			
 			done = true;
 			
@@ -81,7 +81,7 @@ public class MyRobot {
 			Position p1 = path[i+1].pose.position;
 			dToPath = distanceToPath(p0, p1);
 							
-			if (dToPath < minDToPath) {
+			if (dToPath <= minDToPath) {
 				minDToPath = dToPath;
 				closestSegment[0] = path[i];
 				closestSegment[1] = path[i+1];
@@ -143,7 +143,39 @@ public class MyRobot {
 		return p.getDistanceTo(pB);
 	}
 	
+	private Position getClosestPointOnSegement(PathNode[] segment) {
 		
+		Position pr = getPosition();
+		Position p0 = segment[0].pose.position;
+		Position p1 = segment[1].pose.position;
+		
+		double vX = p1.x - p0.x;
+		double vY = p1.y - p0.y;
+		
+		double wX = pr.x - p0.x;
+		double wY = pr.y - p0.y;
+		
+		double c1 = wX*vX + wY*vY;
+		double c2 = vX*vX + vY*vY;
+		
+		double b = c1/c2;
+
+		Position pB = new Position(p0.x + b*vX,  p0.y + b*vY);
+		
+		double pp1v = 
+		double pp0v = 
+		
+//		
+//		if(vinkel == x)
+			return pB;
+//		else if (vinkel = y)
+//			return p0;
+//		else
+//			return p1;
+	}
+	
+	
+	double angleLawOfCosine(double )
 
 	public void setPath(PathNode[] path) {
 		this.path = path;

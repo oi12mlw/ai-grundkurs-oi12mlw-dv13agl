@@ -12,9 +12,9 @@ public class MyRobotTest {
 		PathNode[] path = new PathNode[3];
 
 		Position p0 = new Position(0, 0);
-		Position p1 = new Position(2, 2);
-		Position p2 = new Position(6, 2);
-		Position pr = new Position(1, 5);
+		Position p1 = new Position(6, 6);
+		Position p2 = new Position(12, 0);
+		Position pr = new Position(6, 3);
 
 		path[0] = new PathNode();
 		path[1] = new PathNode();
@@ -26,16 +26,11 @@ public class MyRobotTest {
 		
 		robot.setPath(path);
 		robot.setPosition(pr);
-		PathNode[] segment = robot.getClosestSegment();
+		PathNode[] asd = robot.getClosestSegment();
+		System.out.println("p0: " + asd[0].pose.position.toString());
+		System.out.println("p1: " + asd[1].pose.position.toString());
 		
-		System.out.println("------RESULT------");
-
-		System.out.println(segment[0].pose.position.toString());
-		System.out.println(segment[1].pose.position.toString());
-		
-		double d = robot.getDistanceToSegment(segment);
-		
-		System.out.println(d);
+		robot.run();
 		
 		
 	}
