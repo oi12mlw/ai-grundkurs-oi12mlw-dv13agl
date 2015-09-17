@@ -17,7 +17,7 @@ import given.RobotCommunication;
  * TestRobot interfaces to the (real or virtual) robot over a network
  * connection. It uses Java -> JSON -> HttpRequest -> Network -> DssHost32 ->
  * Lokarria(Robulab) -> Core -> MRDS4
- * 
+ *
  * @author thomasj
  */
 public class MyRobot {
@@ -36,7 +36,7 @@ public class MyRobot {
 		mapper = new ObjectMapper();
 		roboCom = new RobotCommunication(host, port);
 	}
-	
+
 	public void setPosition(Position position)
 	{
 		this.position = position;
@@ -44,138 +44,155 @@ public class MyRobot {
 
 	public void run() throws Exception {
 
-		
+
 		boolean done = false;
 		while(!done) {
 
 			PathNode[] closestSegment = getClosestSegment();
-			//double dToClosestSegment = getDistanceToSegment(closestSegment);			
+			//double dToClosestSegment = getDistanceToSegment(closestSegment);
 			Position p = getClosestPointOnSegement(closestSegment);
-			
+
 			System.out.println("Closest point: " + p.toString());
-			
+
 			done = true;
-			
-			
+
+
 		}
-		
-		
+
+
 	}
 
 	double getDistanceToSegment(PathNode[] closestSegment) {
 		return distanceToPath(closestSegment[0].pose.position, closestSegment[1].pose.position);
-		
+
 	}
 
 	PathNode[] getClosestSegment() throws Exception {
-		
+
 		double dToPath = distanceToPath(path[0].pose.position, path[1].pose.position);
 		double minDToPath = dToPath;
 		PathNode[] closestSegment = new PathNode[2];
 		closestSegment[0] = path[0];
 		closestSegment[1] = path[1];
-		
+
 		for (int i = 0; i < path.length - 1; i++) {
-			
+
 			Position p0 = path[i].pose.position;
 			Position p1 = path[i+1].pose.position;
 			dToPath = distanceToPath(p0, p1);
-							
+
 			if (dToPath <= minDToPath) {
 				minDToPath = dToPath;
 				closestSegment[0] = path[i];
 				closestSegment[1] = path[i+1];
 			}
 		}
-		
+
 		return closestSegment;
 	}
 
 
 
-	
+
 	private Position getPosition()  {
-		
+
 		LocalizationResponse r = new LocalizationResponse();
-		
+
 		try {
 			roboCom.getResponse(r);
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			return this.position;
 		}
-		
-		
+
+
 		double[] posArray = r.getPosition();
 		Position p = new Position(posArray[0], posArray[1]);
-		
+
 		return p;
-		
+
 	}
 
 	private double distanceToPath(Position p0, Position p1) {
-		
+
 		Position p = getPosition();
-		
+
 		double vX = p1.x - p0.x;
 		double vY = p1.y - p0.y;
-		
+
 		double wX = p.x - p0.x;
 		double wY = p.y - p0.y;
-		
+
 		double c1 = wX*vX + wY*vY;
-		
+
 		if (c1 <= 0) {
 			return p.getDistanceTo(p0);
 		}
-		
-		
+
+
 		double c2 = vX*vX + vY*vY;
 		if ( c2 <= c1) {
 			return p.getDistanceTo(p1);
 		}
-		
+
 		double b = c1/c2;
-		
+
 		Position pB = new Position(p0.x + b*vX,  p0.y + b*vY);
 
-		
+
 		return p.getDistanceTo(pB);
 	}
-	
-	private Position getClosestPointOnSegement(PathNode[] segment) {
-		
-		Position pr = getPosition();
+
+	Position getClosestPointOnSegement(PathNode[] segment) {
+
+		Position p = getPosition();
 		Position p0 = segment[0].pose.position;
 		Position p1 = segment[1].pose.position;
-		
+
 		double vX = p1.x - p0.x;
 		double vY = p1.y - p0.y;
-		
-		double wX = pr.x - p0.x;
-		double wY = pr.y - p0.y;
-		
+
+		double wX = p.x - p0.x;
+		double wY = p.y - p0.y;
+
 		double c1 = wX*vX + wY*vY;
 		double c2 = vX*vX + vY*vY;
-		
+
 		double b = c1/c2;
 
 		Position pB = new Position(p0.x + b*vX,  p0.y + b*vY);
-		
-		double pp1v = 
-		double pp0v = 
-		
-//		
-//		if(vinkel == x)
+
+		double p0p1 = Math.sqrt(Math.pow(p0.x - p1.x, 2) + Math.pow(p0.y - p1.y, 2));
+		double p0p  = Math.sqrt(Math.pow(p0.x - p.x, 2) + Math.pow(p0.y - p.y, 2));
+		double p1p  = Math.sqrt(Math.pow(p1.x - p.x, 2) + Math.pow(p1.y - p.y, 2));
+
+		double angle_p0 = angleLawOfCosine(p1p, p0p, p0p1);
+		double angle_p1 = angleLawOfCosine(p0p, p0p1, p1p);
+
+		System.out.println("vinkel i p0: " + angle_p0);
+		System.out.println("vinkel i p1: " + angle_p1);
+
+		if (angle_p0 == 90) {
+			return p0;
+		} else if (angle_p1 == 90) {
+			return p1;
+		} else if(angle_p0 > 90) {
+			return p0;
+		} else if(angle_p1 > 90) {
+			return p1;
+		} else {
 			return pB;
-//		else if (vinkel = y)
-//			return p0;
-//		else
-//			return p1;
+		}
+
 	}
-	
-	
-	double angleLawOfCosine(double )
+
+
+	double angleLawOfCosine(double a, double b, double c) {
+
+		double cosA = (Math.pow(b, 2) + Math.pow(c, 2) - Math.pow(a, 2))/ (2*b*c);
+		return Math.toDegrees(Math.acos(cosA));
+
+	}
 
 	public void setPath(PathNode[] path) {
 		this.path = path;
@@ -183,7 +200,7 @@ public class MyRobot {
 
 	/**
 	 * Extract the robot bearing from the response
-	 * 
+	 *
 	 * @param lr
 	 * @return angle in degrees
 	 */
@@ -196,7 +213,7 @@ public class MyRobot {
 
 	/**
 	 * Extract the position
-	 * 
+	 *
 	 * @param lr
 	 * @return coordinates
 	 */
