@@ -8,6 +8,7 @@ import simulation.Path;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import geometry.Edge;
+import geometry.Triangle;
 import geometry.Vertex;
 import given.*;
 
@@ -50,6 +51,9 @@ public class MyRobot {
 			ArrayList<Edge> carrotPath = path.getCarrotPathFrom(Vertex.fromPosition(getPosition()), LOOK_AHEAD_DISTANCE);
 
 			double orientation = getOrientation();
+			Vertex carrotPoint = carrotPath.get(carrotPath.size() - 1).end;
+			double carrotAngle = getCarrotAngle(carrotPoint);
+			double errorAngle;
 
 
 
@@ -60,6 +64,21 @@ public class MyRobot {
 
 
 
+
+	private double getCarrotAngle(Vertex carrotPoint) {
+
+		Vertex origo = new Vertex(0, 0);
+		Vertex v 	 = new Vertex(carrotPoint.x, 0);
+
+		Triangle t = new Triangle(carrotPoint, origo, v);
+
+		try {
+			return t.getAngleInVertex(origo);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			return 0;
+		}
+	}
 
 	private Position getPosition()  {
 
