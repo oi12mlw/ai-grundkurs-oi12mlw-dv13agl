@@ -2,7 +2,6 @@ package simulation;
 import java.util.ArrayList;
 
 import localization.Position;
-
 import simulation.Path;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,17 +22,11 @@ public class MyRobot {
 
 	private static final double LOOK_AHEAD_DISTANCE = 50;
 	private Path path;
-	private String host;
-	private int port;
-	private ObjectMapper mapper;
 	private RobotCommunication roboCom;
 	private Position position;
 
 	public MyRobot(String host, int port) {
-		this.host = host;
-		this.port = port;
 		this.position = new Position(0, 0);
-		mapper = new ObjectMapper();
 		roboCom = new RobotCommunication(host, port);
 	}
 
@@ -44,38 +37,40 @@ public class MyRobot {
 
 	public void run() throws Exception {
 
-
 		boolean done = false;
 		while(!done) {
 
 			ArrayList<Edge> carrotPath = path.getCarrotPathFrom(Vertex.fromPosition(getPosition()), LOOK_AHEAD_DISTANCE);
-
-			double orientation = getOrientation();
 			Vertex carrotPoint = carrotPath.get(carrotPath.size() - 1).end;
+
+			double kp = 1;
+			double orientation = getOrientation();
 			double carrotAngle = getCarrotAngle(carrotPoint);
-			double errorAngle;
-
-
-
+			double errorAngle  = (carrotAngle - orientation) * kp;
+			
+			if(errorAngle > 180) {
+				errorAngle -= 360;
+			} else if(errorAngle < -180) {
+				errorAngle += 360;
+			} else {}
+			
 		}
 
 
 	}
 
-
-
-
 	private double getCarrotAngle(Vertex carrotPoint) {
 
 		Vertex origo = new Vertex(0, 0);
-		Vertex v 	 = new Vertex(carrotPoint.x, 0);
+		Vertex pointOnXAxis 	 = new Vertex(Math.abs(carrotPoint.x), 0);
 
-		Triangle t = new Triangle(carrotPoint, origo, v);
-
+		Triangle triangle = new Triangle(origo, carrotPoint, pointOnXAxis);
 		try {
-			return t.getAngleInVertex(origo);
+			double angle = triangle.getAngleInVertex(origo);
+			angle = (carrotPoint.y < 0 ? -angle : angle);
+			System.out.println("our angle: " + angle);
+			return angle;
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
 			return 0;
 		}
 	}
@@ -90,12 +85,12 @@ public class MyRobot {
 			// TODO Auto-generated catch block
 			return this.position;
 		}
-
-
+		
 		double[] posArray = r.getPosition();
 		Position p = new Position(posArray[0], posArray[1]);
 
 		return p;
+		
 
 	}
 
@@ -110,11 +105,21 @@ public class MyRobot {
 			return 0;
 		}
 
-		Quaternion q = new Quaternion(r.getOrientation());
-
-		System.out.println(String.format("x: %.1f, y: %.1f, z: %.1f", q.bearing()[0], q.bearing()[1], q.bearing()[2]));
-
-		return q.bearing()[0];
+		double[] bearing = (new Quaternion(r.getOrientation())).bearing();
+		
+		Vertex origo = new Vertex(0, 0);
+		Vertex v1 = new Vertex(bearing[0], bearing[1]);
+		Vertex v2 = new Vertex(Math.abs(bearing[0]), 0);
+		
+		Triangle triangle = new Triangle(origo, v1, v2);
+		try {
+			double angle = triangle.getAngleInVertex(origo);
+			angle = (bearing[1] < 0 ? -angle : angle);
+			System.out.println("our angle: " + angle);
+			return angle;
+		} catch (Exception e) {
+			return 0;
+		}
 
 	}
 

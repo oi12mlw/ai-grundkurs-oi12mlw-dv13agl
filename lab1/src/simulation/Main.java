@@ -1,8 +1,6 @@
+package simulation;
 import localization.PathNode;
 import localization.PathParser;
-
-import simulation.MyRobot;
-import simulation.Path;
 
 /**
  *
@@ -25,7 +23,7 @@ public class Main {
 		MyRobot robot = new MyRobot("http://127.0.0.1", 50000);
 		robot.setPath(path);
 
-		//robot.run();
+		robot.run();
 	}
 
 }
