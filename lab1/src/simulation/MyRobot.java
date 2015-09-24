@@ -16,21 +16,22 @@ import given.*;
  * connection. It uses Java -> JSON -> HttpRequest -> Network -> DssHost32 ->
  * Lokarria(Robulab) -> Core -> MRDS4
  *
- * @author thomasj
+ * @author günzel och marcus
  */
 public class MyRobot {
 
 	private static final double LOOK_AHEAD_DISTANCE = 50;
+	private static final double SPEED = 1.0;
 	private Path path;
 	private RobotCommunication roboCom;
-	private Position position;
+	private Vertex position;
 
 	public MyRobot(String host, int port) {
-		this.position = new Position(0, 0);
+		this.position = Vertex.fromPosition(new Position(0, 0));
 		roboCom = new RobotCommunication(host, port);
 	}
 
-	public void setPosition(Position position)
+	public void setPosition(Vertex position)
 	{
 		this.position = position;
 	}
@@ -40,11 +41,15 @@ public class MyRobot {
 		boolean done = false;
 		while(!done) {
 
-			ArrayList<Edge> carrotPath = path.getCarrotPathFrom(Vertex.fromPosition(getPosition()), LOOK_AHEAD_DISTANCE);
+			LocalizationResponse r = new LocalizationResponse();
+
+			position = Vertex.fromPosition(getPosition(r));
+			
+			ArrayList<Edge> carrotPath = path.getCarrotPathFrom(position, LOOK_AHEAD_DISTANCE);
 			Vertex carrotPoint = carrotPath.get(carrotPath.size() - 1).end;
 
 			double kp = 1;
-			double orientation = getOrientation();
+			double orientation = getOrientation(r);
 			double carrotAngle = getCarrotAngle(carrotPoint);
 			double errorAngle  = (carrotAngle - orientation) * kp;
 			
@@ -53,6 +58,20 @@ public class MyRobot {
 			} else if(errorAngle < -180) {
 				errorAngle += 360;
 			} else {}
+			
+			
+			double distance = position.distanceTo(carrotPoint);
+			
+			double time = distance / SPEED;
+			double angularVelocity = errorAngle/time; 
+			
+		    DifferentialDriveRequest dr = new DifferentialDriveRequest();
+		    dr.setLinearSpeed(SPEED);
+		    dr.setAngularSpeed(angularVelocity);		    
+		    
+			roboCom.putRequest(dr);
+			
+			Thread.sleep((long) (time/2));
 			
 		}
 
@@ -75,15 +94,14 @@ public class MyRobot {
 		}
 	}
 
-	private Position getPosition()  {
+	private Position getPosition(LocalizationResponse r)  {
 
-		LocalizationResponse r = new LocalizationResponse();
 
 		try {
 			roboCom.getResponse(r);
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			return this.position;
+			
+			return new Position(position.x, position.y);
 		}
 		
 		double[] posArray = r.getPosition();
@@ -94,9 +112,8 @@ public class MyRobot {
 
 	}
 
-	private double getOrientation()  {
+	private double getOrientation(LocalizationResponse r)  {
 
-		LocalizationResponse r = new LocalizationResponse();
 
 		try {
 			roboCom.getResponse(r);
@@ -120,6 +137,8 @@ public class MyRobot {
 		} catch (Exception e) {
 			return 0;
 		}
+			
+		
 
 	}
 
@@ -139,16 +158,6 @@ public class MyRobot {
 
 		double angle = 2 * Math.atan2(e[3], e[0]);
 		return angle * 180 / Math.PI;
-	}
-
-	/**
-	 * Extract the position
-	 *
-	 * @param lr
-	 * @return coordinates
-	 */
-	double[] getPosition(LocalizationResponse lr) {
-		return lr.getPosition();
 	}
 
 }
