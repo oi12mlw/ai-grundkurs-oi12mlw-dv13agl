@@ -37,14 +37,18 @@ public class Path {
         }
     }
 
-    private int getIndexOfClosestEdgeToVertex(Vertex vertex) {
+    private int getIndexOfClosestEdgeToVertex(Vertex vertex, int edgeIntervalStart, int edgeIntervalEnd) {
         if(!edges.isEmpty()) {
 
             Vertex closestVertexOnEdge = edges.get(0).getClosestVertexOnEdge(vertex);
             double minD = vertex.distanceTo(closestVertexOnEdge);
             int index = 0;
 
-            for(int i = 0; i < edges.size(); i++) {
+            if(edgeIntervalEnd > edges.size()) {
+            	edgeIntervalEnd = edges.size();
+            }
+            
+            for(int i = edgeIntervalStart; i < edgeIntervalEnd; i++) {
 
                 closestVertexOnEdge = edges.get(i).getClosestVertexOnEdge(vertex);
                 double d    = vertex.distanceTo(closestVertexOnEdge);
@@ -59,15 +63,15 @@ public class Path {
         return -1;
     }
 
-    public Edge getClosestEdgeToVertex(Vertex vertex) {
-        int index = getIndexOfClosestEdgeToVertex(vertex);
-        return (index >= 0 ? edges.get(getIndexOfClosestEdgeToVertex(vertex)) : null);
+    public Edge getClosestEdgeToVertex(Vertex vertex, int edgeIntervalStart, int edgeIntervalEnd) {
+        int index = getIndexOfClosestEdgeToVertex(vertex, edgeIntervalStart, edgeIntervalEnd);
+        return (index >= 0 ? edges.get(index) : null);
     }
 
-    public ArrayList<Edge> getCarrotPathFrom(Vertex vertex, double lookAheadDistance) {
+    public ArrayList<Edge> getCarrotPathFrom(Vertex vertex, double lookAheadDistance, int edgeIntervalStart, int edgeIntervalEnd) {
         ArrayList<Edge> carrotPath = new ArrayList<Edge>();
 
-        int indexOfStartEdge = getIndexOfClosestEdgeToVertex(vertex);
+        int indexOfStartEdge = getIndexOfClosestEdgeToVertex(vertex, edgeIntervalStart, edgeIntervalEnd);
         if(indexOfStartEdge < 0) {
             return carrotPath;
         }
@@ -107,13 +111,25 @@ public class Path {
             start = currentEdge.end;
 
         }
+        
+        removeBefore(indexOfStartEdge);
 
         return carrotPath;
 
 
     }
 
-    public String[] getPathAsStringArray() {
+    private void removeBefore(int indexOfStartEdge) {
+		
+    	for(int i = 0; i < Math.abs(indexOfStartEdge - 5); i++) {
+    		edges.remove(0);	
+    	}
+    	
+    	
+		
+	}
+
+	public String[] getPathAsStringArray() {
         String[] strings = new String[edges.size()];
 
         for (int i = 0; i < edges.size(); i++) {
@@ -153,5 +169,21 @@ public class Path {
 
 		return path;
 
+	}
+	
+	public double lengthOfPath() {
+		
+		double length = 0;
+		
+		for(Edge e : edges) {
+			
+			length += e.start.distanceTo(e.end);
+		}
+		
+		return length;
+	}
+	
+	public double avgEdgeLength() {
+		return lengthOfPath() / edges.size();
 	}
 }

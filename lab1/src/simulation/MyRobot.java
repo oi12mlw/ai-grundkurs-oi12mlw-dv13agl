@@ -1,5 +1,9 @@
 package simulation;
+
+import java.io.FileWriter;
+import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.Locale;
 
 import localization.Position;
 import simulation.Path;
@@ -15,13 +19,15 @@ import given.*;
  * TestRobot interfaces to the (real or virtual) robot over a network
  * connection. It uses Java -> JSON -> HttpRequest -> Network -> DssHost32 ->
  * Lokarria(Robulab) -> Core -> MRDS4
- *
+ * 
  * @author günzel och marcus
  */
 public class MyRobot {
 
-	private static final double LOOK_AHEAD_DISTANCE = 50;
-	private static final double SPEED = 1.0;
+	private static final double LOOK_AHEAD_DISTANCE = 0.38;
+	private static final double SPEED = 0.25;
+	private static final int SEGEMENTS_PER_IT = 100;
+	private static final int MAX_STEERING = 110;
 	private Path path;
 	private RobotCommunication roboCom;
 	private Vertex position;
@@ -31,117 +37,137 @@ public class MyRobot {
 		roboCom = new RobotCommunication(host, port);
 	}
 
-	public void setPosition(Vertex position)
-	{
+	public void setPosition(Vertex position) {
 		this.position = position;
 	}
 
 	public void run() throws Exception {
 
+		PrintWriter pw = new PrintWriter("cps.txt", "UTF-8");
+		PrintWriter pw2 = new PrintWriter("robotPos.txt", "UTF-8");
+
+		Thread.sleep(3000);
+//		int edgeIntervalEnd = path.getEdges().size() / 20;
+//		double distanceTraveled = 0.0;
+//		double avgEdgeLength = path.avgEdgeLength();
+
+		LocalizationResponse r = new LocalizationResponse();
+		roboCom.getResponse(r);
+//		Vertex lastPosition = Vertex.fromPosition(getPosition(r));
+
 		boolean done = false;
-		while(!done) {
+		while (!done) {
 
-			LocalizationResponse r = new LocalizationResponse();
+			r = new LocalizationResponse();
+			try {
+				roboCom.getResponse(r);
 
-			position = Vertex.fromPosition(getPosition(r));
+				position = Vertex.fromPosition(getPosition(r));
+
+				ArrayList<Edge> carrotPath = path
+						.getCarrotPathFrom(position, LOOK_AHEAD_DISTANCE, 0, 100);
+				Vertex carrotPoint = carrotPath.get(carrotPath.size() - 1).end;
+				pw.println(String.format(Locale.US, "%f %f", carrotPoint.x,
+						carrotPoint.y));
+				pw2.println(String.format(Locale.US, "%f %f", position.x,
+						position.y));
+
+				double orientation = getOrientation(r);
+				double errorAngle = getErrorAngle(carrotPoint, orientation);
+
+				if (errorAngle > 180) {
+					errorAngle -= 360;
+				} else if (errorAngle < -180) {
+					errorAngle += 360;
+				} else {
+
+				}
+				//
+				// if(Math.abs(errorAngle) > MAX_STEERING) {
+				// errorAngle = 0;
+				// }
+
+				double distance = position.distanceTo(carrotPoint);
+
+				DifferentialDriveRequest dr = new DifferentialDriveRequest();
+				
+				
+				double driveTime = 0.02;
+				
+				dr.setLinearSpeed(0.86);
+				dr.setAngularSpeed(Math.toRadians(errorAngle)*1.15);
+				roboCom.putRequest(dr);
+
+				Thread.sleep((long) (driveTime*1000));
+//				dr.setAngularSpeed(0);
+//				dr.setLinearSpeed(0);
+//
+//				roboCom.putRequest(dr);
+//				Thread.sleep(100);
+
+//				distanceTraveled = lastPosition.distanceTo(position);
+//				int edgesTraveled = (int) (distanceTraveled / avgEdgeLength);
+//				edgeIntervalEnd = edgesTraveled;
+//
+//				lastPosition = position;
+
+			} catch (Exception e) {
+				pw.close();
+				pw2.close();
+				e.printStackTrace();
+			}
 			
-			ArrayList<Edge> carrotPath = path.getCarrotPathFrom(position, LOOK_AHEAD_DISTANCE);
-			Vertex carrotPoint = carrotPath.get(carrotPath.size() - 1).end;
-
-			double kp = 1;
-			double orientation = getOrientation(r);
-			double carrotAngle = getCarrotAngle(carrotPoint);
-			double errorAngle  = (carrotAngle - orientation) * kp;
-			
-			if(errorAngle > 180) {
-				errorAngle -= 360;
-			} else if(errorAngle < -180) {
-				errorAngle += 360;
-			} else {}
-			
-			
-			double distance = position.distanceTo(carrotPoint);
-			
-			double time = distance / SPEED;
-			double angularVelocity = errorAngle/time; 
-			
-		    DifferentialDriveRequest dr = new DifferentialDriveRequest();
-		    dr.setLinearSpeed(SPEED);
-		    dr.setAngularSpeed(angularVelocity);		    
-		    
-			roboCom.putRequest(dr);
-			
-			Thread.sleep((long) (time/2));
-			
-		}
-
-
-	}
-
-	private double getCarrotAngle(Vertex carrotPoint) {
-
-		Vertex origo = new Vertex(0, 0);
-		Vertex pointOnXAxis 	 = new Vertex(Math.abs(carrotPoint.x), 0);
-
-		Triangle triangle = new Triangle(origo, carrotPoint, pointOnXAxis);
-		try {
-			double angle = triangle.getAngleInVertex(origo);
-			angle = (carrotPoint.y < 0 ? -angle : angle);
-			System.out.println("our angle: " + angle);
-			return angle;
-		} catch (Exception e) {
-			return 0;
-		}
-	}
-
-	private Position getPosition(LocalizationResponse r)  {
-
-
-		try {
-			roboCom.getResponse(r);
-		} catch (Exception e) {
-			
-			return new Position(position.x, position.y);
+			if(path.getEdges().size() < 5) {
+				done = true;
+				DifferentialDriveRequest dr = new DifferentialDriveRequest();
+				dr.setAngularSpeed(0);
+				dr.setLinearSpeed(0);
+				roboCom.putRequest(dr);
+			}
+					
 		}
 		
+		System.out.println("I MÅL!!! :D");
+
+		pw.close();
+		pw2.close();
+	}
+
+	private double getErrorAngle(Vertex carrotPoint, double orientation) {
+
+		double angle1 = Math.toDegrees(Math.atan2(carrotPoint.y - position.y,
+				carrotPoint.x - position.x));
+
+		return angle1 - orientation;
+	}
+
+	private Position getPosition(LocalizationResponse r) {
+
 		double[] posArray = r.getPosition();
 		Position p = new Position(posArray[0], posArray[1]);
 
 		return p;
-		
 
 	}
 
-	private double getOrientation(LocalizationResponse r)  {
-
-
-		try {
-			roboCom.getResponse(r);
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			return 0;
-		}
+	private double getOrientation(LocalizationResponse r) {
 
 		double[] bearing = (new Quaternion(r.getOrientation())).bearing();
-		
+
 		Vertex origo = new Vertex(0, 0);
 		Vertex v1 = new Vertex(bearing[0], bearing[1]);
 		Vertex v2 = new Vertex(Math.abs(bearing[0]), 0);
-		
+
 		Triangle triangle = new Triangle(origo, v1, v2);
 		try {
 			double angle = triangle.getAngleInVertex(origo);
 			angle = (bearing[1] < 0 ? -angle : angle);
-			System.out.println("our angle: " + angle);
 			return angle;
 		} catch (Exception e) {
 			return 0;
 		}
-			
-		
 
 	}
-
 
 	public void setPath(Path path) {
 		this.path = path;
@@ -149,7 +175,7 @@ public class MyRobot {
 
 	/**
 	 * Extract the robot bearing from the response
-	 *
+	 * 
 	 * @param lr
 	 * @return angle in degrees
 	 */

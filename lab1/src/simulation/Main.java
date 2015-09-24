@@ -1,4 +1,11 @@
 package simulation;
+import geometry.Edge;
+
+import java.io.FileNotFoundException;
+import java.io.PrintWriter;
+import java.io.UnsupportedEncodingException;
+import java.util.Locale;
+
 import localization.PathNode;
 import localization.PathParser;
 
@@ -20,10 +27,28 @@ public class Main {
 
 		Path path =  Path.fromPathNodes(pathNodes);
 
+		//writePath(path);
+		
 		MyRobot robot = new MyRobot("http://127.0.0.1", 50000);
 		robot.setPath(path);
 
 		robot.run();
+	}
+
+	private static void writePath(Path path) throws FileNotFoundException, UnsupportedEncodingException {
+
+		PrintWriter pw = new PrintWriter("path.txt");
+		
+		for(Edge e : path.getEdges()) {
+			
+			pw.println(String.format(Locale.US, "%.6f %.6f", e.start.x, e.start.y));
+			
+			
+		}
+		pw.close();
+		
+		
+		
 	}
 
 }

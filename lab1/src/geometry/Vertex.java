@@ -55,4 +55,10 @@ public class Vertex {
 
 		return new Vertex(position.x, position.y);
 	}
+	
+	public double getAngleTo(Vertex dest) {
+
+		return Math.atan2(dest.y-y, dest.x-x);
+
+	}
 }

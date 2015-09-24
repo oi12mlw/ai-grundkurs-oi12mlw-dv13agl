@@ -65,6 +65,8 @@ public class Edge {
             closest = start;
         } else if (angleInEnd >= 90) {
             closest = end;
+        } else if(angleInStart == 0 && angleInEnd == 0) {
+        	closest = c1 < 0 ? start : end;
         } else {
             closest = start.concat(v.scale(b));
         }
