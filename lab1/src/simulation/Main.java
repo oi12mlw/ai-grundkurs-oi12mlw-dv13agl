@@ -23,7 +23,7 @@ public class Main {
 	public static void main(String[] args) throws Exception {
 
 		//String pathFile = args[0];
-		String pathFile = "path.json";
+		String pathFile = PathConstants.PATH;
 		MyRobot robot = new MyRobot("http://127.0.0.1", 50000);
 
 		Thread.sleep(2000);
@@ -33,9 +33,7 @@ public class Main {
 		} else {
 			run(robot, pathFile);	
 		}
-		
-				
-		
+	
 	}
 
 	private static void run(MyRobot robot, String pathFile) throws Exception {
@@ -51,7 +49,7 @@ public class Main {
 		double elapsed = System.nanoTime() - currentTime;
 		
 		System.out.println("DONE");
-		System.out.println("Elapsed: " + elapsed / 1000000000);
+		System.out.println("Elapsed: " + elapsed / 1000000000.0);
 	}
 
 	private static void recordPath(MyRobot robot) {

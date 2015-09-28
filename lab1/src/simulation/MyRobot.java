@@ -1,16 +1,12 @@
 package simulation;
 
 import java.io.FileNotFoundException;
-import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Locale;
 
 import localization.Position;
 import simulation.Path;
-
-import com.fasterxml.jackson.databind.ObjectMapper;
-
 import geometry.Edge;
 import geometry.Triangle;
 import geometry.Vertex;
@@ -25,12 +21,12 @@ import given.*;
  */
 public class MyRobot {
 
-	private static final double LOOK_AHEAD_DISTANCE = 1.0;
-	private static final double SPEED = 2.0;
-	private static final int SEGEMENTS_PER_IT = 100;
-	private static final int MAX_STEERING = 110;
+	private static final double LOOK_AHEAD_DISTANCE = 1.00;
+	private static final double SPEED = 3.0;
+	
 	private Path path;
 	private Path takenPath = new Path();
+	
 	private RobotCommunication roboCom;
 	private Vertex position;
 	private double avgEdgeLength;
@@ -38,127 +34,117 @@ public class MyRobot {
 	public MyRobot(String host, int port) {
 		this.position = Vertex.fromPosition(new Position(0, 0));
 		roboCom = new RobotCommunication(host, port);
-	}
 
-	public void setPosition(Vertex position) {
-		this.position = position;
 	}
 
 	public void run() throws Exception {
 
-		PrintWriter pw = new PrintWriter("cps.txt", "UTF-8");
-		PrintWriter pw2 = new PrintWriter("robotPos.txt", "UTF-8");
+		PrintWriter carrotPointWriter = new PrintWriter("cps.txt", "UTF-8");
+		PrintWriter robotPathWriter = new PrintWriter("robotPos.txt", "UTF-8");
 
-		// int edgeIntervalEnd = path.getEdges().size() / 20;
-		// double distanceTraveled = 0.0;
-		avgEdgeLength = path.avgEdgeLength();
-
-		LocalizationResponse r = new LocalizationResponse();
-		roboCom.getResponse(r);
-		// Vertex lastPosition = Vertex.fromPosition(getPosition(r));
+		LocalizationResponse locResponse = new LocalizationResponse();
+		roboCom.getResponse(locResponse);
 
 		boolean done = false;
 		while (!done) {
-
-			r = new LocalizationResponse();
+			locResponse = new LocalizationResponse();
 			try {
-				roboCom.getResponse(r);
+				
+				roboCom.getResponse(locResponse);
 
-				position = Vertex.fromPosition(getPosition(r));
+				updatePosition(locResponse);
+				
+				Vertex carrotPoint = getCarrotPoint();
+				logPath(carrotPointWriter, robotPathWriter, carrotPoint);
 
-				ArrayList<Edge> carrotPath = path.getCarrotPathFrom(position,
-						LOOK_AHEAD_DISTANCE, 0, 100);
-				Vertex carrotPoint = carrotPath.get(carrotPath.size() - 1).end;
-				pw.println(String.format(Locale.US, "%f %f", carrotPoint.x,
-						carrotPoint.y));
-				pw2.println(String.format(Locale.US, "%f %f", position.x,
-						position.y));
+				double errorAngle = getErrorAngle(locResponse, carrotPoint);			
+				
+				double linearSpeed = SPEED;
+				long driveTime = 50L;
 
-				double orientation = getOrientation(r);
-				double errorAngle = getErrorAngle(carrotPoint, orientation);
+				if (Math.abs(errorAngle) > 110) {
+					linearSpeed = 0;
+					driveTime += 1000;					
+				}				
 
-				if (errorAngle > 180) {
-					errorAngle -= 360;
-				} else if (errorAngle < -180) {
-					errorAngle += 360;
-				} else {
-
-				}
-				//
-				// if(Math.abs(errorAngle) > MAX_STEERING) {
-				// errorAngle = 0;
-				// }
-
-				double distance = position.distanceTo(carrotPoint);
-
-				DifferentialDriveRequest dr = new DifferentialDriveRequest();
-
-				double speed = Math.max(1,
-						1.1 * Math.abs(Math.toRadians(errorAngle)));
-				if (Math.abs(errorAngle) > 120) {
-					speed = 0;
-					errorAngle *= 1.15;
+				double angularSpeed = Math.toRadians(errorAngle)*2.5;
 					
-				}else{
-					if (Math.abs(errorAngle) > 45){
-						errorAngle *= 1.35;
-					}
-				}
-				double driveTime = distance / SPEED;
+				setSpeed(angularSpeed, linearSpeed);
 
-				dr.setLinearSpeed(speed);
+				Thread.sleep(driveTime);
 
-
-				dr.setAngularSpeed(Math.toRadians(errorAngle) / driveTime);
-				roboCom.putRequest(dr);
-
-				Thread.sleep((long) (driveTime * 350));
-				// dr.setAngularSpeed(0);
-				// dr.setLinearSpeed(0);
-				//
-				// roboCom.putRequest(dr);
-				// Thread.sleep(100);
-
-				// distanceTraveled = lastPosition.distanceTo(position);
-				// int edgesTraveled = (int) (distanceTraveled / avgEdgeLength);
-				// edgeIntervalEnd = edgesTraveled;
-				//
-				// lastPosition = position;
-
-				boolean closeToFinish = path.getEnd().getDistanceTo(
-						carrotPoint.toPosition()) < path.avgEdgeLength() * 2;
-
-				if (isAt(path.getEnd()) && closeToFinish) {
+				if (isCloseToFinish(carrotPoint)) {
 					done = true;
-					dr = new DifferentialDriveRequest();
-					dr.setAngularSpeed(0);
-					dr.setLinearSpeed(0);
-					roboCom.putRequest(dr);
+					stop();
 				}
 
 			} catch (Exception e) {
-				pw.close();
-				pw2.close();
-				done=true;
+				done = true;
 			}
-
 		}
 
-		pw.close();
-		pw2.close();
+		carrotPointWriter.close();
+		robotPathWriter.close();
+	}
+
+	private boolean isCloseToFinish(Vertex carrotPoint) {
+		return isAt(path.getEnd()) && path.getEnd().getDistanceTo(carrotPoint.toPosition()) < path.avgEdgeLength() * 2;
+	}
+
+
+	private void setSpeed(double angularSpeed, double linearSpeed)
+			throws Exception {
+		DifferentialDriveRequest diffDriveRequest = new DifferentialDriveRequest();
+		diffDriveRequest.setLinearSpeed(linearSpeed);
+		diffDriveRequest.setAngularSpeed(angularSpeed);
+		roboCom.putRequest(diffDriveRequest);
+	}
+
+	private void logPath(PrintWriter carrotPointWriter,	PrintWriter robotPathWriter, Vertex carrotPoint) {
+		
+		carrotPointWriter.println(String.format(Locale.US, "%f %f", carrotPoint.x, carrotPoint.y));
+		robotPathWriter.println(String.format(Locale.US, "%f %f", position.x, position.y));
+		
+	}
+
+	private double getErrorAngle(LocalizationResponse r, Vertex carrotPoint) {
+		
+		double orientation = getOrientation(r);
+		double carrotAngle = Math.toDegrees(Math.atan2(carrotPoint.y - position.y,carrotPoint.x - position.x));
+		double errorAngle = carrotAngle - orientation;
+
+		if (errorAngle > 180) {
+			errorAngle -= 360;
+		} else if (errorAngle < -180) {
+			errorAngle += 360;
+		} else {
+
+		}
+		
+		return errorAngle;
+	}
+
+	private void updatePosition(LocalizationResponse r) {
+		position = Vertex.fromPosition(getPosition(r));
+	}
+
+	private Vertex getCarrotPoint() {
+		ArrayList<Edge> carrotPath = path.getCarrotPathFrom(position, LOOK_AHEAD_DISTANCE, 0, 100);
+		Vertex carrotPoint = carrotPath.get(carrotPath.size() - 1).end;
+		return carrotPoint;
+	}
+
+	private void stop() throws Exception {
+		DifferentialDriveRequest dr;
+		dr = new DifferentialDriveRequest();
+		dr.setAngularSpeed(0);
+		dr.setLinearSpeed(0);
+		roboCom.putRequest(dr);
 	}
 
 	private boolean isAt(Position end) {
 
-		return position.toPosition().getDistanceTo(end) < avgEdgeLength * 20;
-	}
-
-	private double getErrorAngle(Vertex carrotPoint, double orientation) {
-
-		double angle1 = Math.toDegrees(Math.atan2(carrotPoint.y - position.y,
-				carrotPoint.x - position.x));
-
-		return angle1 - orientation;
+		return position.toPosition().getDistanceTo(end) < avgEdgeLength * 10;
 	}
 
 	private Position getPosition(LocalizationResponse r) {
@@ -227,8 +213,10 @@ public class MyRobot {
 
 	}
 
+	
 	public void setPath(Path path) {
-		this.path = path;
+		this.path = path;	
+		avgEdgeLength = path.avgEdgeLength();
 	}
 
 	/**
