@@ -32,7 +32,14 @@ public class Main {
 		MyRobot robot = new MyRobot("http://127.0.0.1", 50000);
 		robot.setPath(path);
 
+		Thread.sleep(3000);
+		double currentTime = System.nanoTime();
+		
 		robot.run();
+		
+		double elapsed = System.nanoTime() - currentTime;
+		
+		System.out.println("Elapsed: " + elapsed / 1000000000);
 	}
 
 	private static void writePath(Path path) throws FileNotFoundException, UnsupportedEncodingException {

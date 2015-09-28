@@ -24,8 +24,8 @@ import given.*;
  */
 public class MyRobot {
 
-	private static final double LOOK_AHEAD_DISTANCE = 0.38;
-	private static final double SPEED = 0.25;
+	private static final double LOOK_AHEAD_DISTANCE = 1;
+	private static final double SPEED = 1.1;
 	private static final int SEGEMENTS_PER_IT = 100;
 	private static final int MAX_STEERING = 110;
 	private Path path;
@@ -92,13 +92,16 @@ public class MyRobot {
 				DifferentialDriveRequest dr = new DifferentialDriveRequest();
 				
 				
-				double driveTime = 0.02;
-				
-				dr.setLinearSpeed(0.86);
-				dr.setAngularSpeed(Math.toRadians(errorAngle)*1.15);
+				double speed = SPEED/Math.max(1, 1.4*Math.abs(Math.toRadians(errorAngle)));
+				double driveTime = distance / speed;
+
+				dr.setLinearSpeed(speed);
+				System.out.println("the angle of doom ist: "+errorAngle);
+
+				dr.setAngularSpeed(Math.pow(Math.toRadians(errorAngle),1.7)/driveTime);
 				roboCom.putRequest(dr);
 
-				Thread.sleep((long) (driveTime*1000));
+				Thread.sleep((long) (driveTime*550));
 //				dr.setAngularSpeed(0);
 //				dr.setLinearSpeed(0);
 //
@@ -110,20 +113,25 @@ public class MyRobot {
 //				edgeIntervalEnd = edgesTraveled;
 //
 //				lastPosition = position;
+				
+				if(carrotPoint.equals(path.getEnd())) {
+					System.out.println("SIKTAR PÅ MÅL!");
+				}
+				
+				if(isAt(path.getEnd()) && carrotPoint.toPosition().equals(path.getEnd()) ) {
+					done = true;
+					dr = new DifferentialDriveRequest();
+					dr.setAngularSpeed(0);
+					dr.setLinearSpeed(0);
+					roboCom.putRequest(dr);
+				}
 
 			} catch (Exception e) {
 				pw.close();
 				pw2.close();
 				e.printStackTrace();
 			}
-			
-			if(path.getEdges().size() < 5) {
-				done = true;
-				DifferentialDriveRequest dr = new DifferentialDriveRequest();
-				dr.setAngularSpeed(0);
-				dr.setLinearSpeed(0);
-				roboCom.putRequest(dr);
-			}
+
 					
 		}
 		
@@ -131,6 +139,11 @@ public class MyRobot {
 
 		pw.close();
 		pw2.close();
+	}
+
+	private boolean isAt(Position end) {
+		
+		return position.toPosition().getDistanceTo(end) < path.avgEdgeLength() * 30;
 	}
 
 	private double getErrorAngle(Vertex carrotPoint, double orientation) {

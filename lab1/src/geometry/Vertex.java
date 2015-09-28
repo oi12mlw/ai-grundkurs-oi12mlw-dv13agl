@@ -61,4 +61,9 @@ public class Vertex {
 		return Math.atan2(dest.y-y, dest.x-x);
 
 	}
+
+	public Position toPosition() {
+		
+		return new Position(x, y);
+	}
 }

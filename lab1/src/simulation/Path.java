@@ -121,7 +121,7 @@ public class Path {
 
     private void removeBefore(int indexOfStartEdge) {
 		
-    	for(int i = 0; i < Math.abs(indexOfStartEdge - 5); i++) {
+    	for(int i = 0; i < Math.abs(indexOfStartEdge); i++) {
     		edges.remove(0);	
     	}
     	
@@ -185,5 +185,10 @@ public class Path {
 	
 	public double avgEdgeLength() {
 		return lengthOfPath() / edges.size();
+	}
+
+	public Position getEnd() {
+		
+		return lastAddedVertex.toPosition();
 	}
 }

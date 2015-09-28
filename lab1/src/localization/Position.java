@@ -40,5 +40,14 @@ public class Position {
 
 		return "(" + x + ", " +  y + ")";
 	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if(obj instanceof Position) {
+			return ((Position)obj).x == this.x && ((Position)obj).y == this.y;
+		} else {
+			return false;
+		}
+	}
 
 }
