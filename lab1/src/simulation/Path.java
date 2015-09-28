@@ -3,10 +3,17 @@ package simulation;
 import geometry.Edge;
 import geometry.Vertex;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import com.fasterxml.jackson.core.JsonGenerationException;
+import com.fasterxml.jackson.databind.JsonMappingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import localization.Orientation;
 import localization.PathNode;
+import localization.Pose;
 import localization.Position;
 
 
@@ -62,6 +69,49 @@ public class Path {
 
         return -1;
     }
+    
+    
+    
+    public String toJson(){
+    	
+    	String json = "";
+    	
+    	PathNode[] pathNodes = new PathNode[edges.size()];
+    	
+    	for(int i = 0 ; i < edges.size(); i++) {
+    		
+    		Vertex v = edges.get(i).start;
+    		pathNodes[i] = new PathNode();
+    		pathNodes[i].pose = new Pose();
+    		pathNodes[i].status = "4";
+    		pathNodes[i].timestamp = "0";
+    		pathNodes[i].pose.orientation = new Orientation();
+    		pathNodes[i].pose.position = new Position(v.x, v.y);
+    		
+    		
+    	}
+    	
+    	
+    	//1. Convert Java object to JSON format
+    	ObjectMapper mapper = new ObjectMapper();
+    	
+    	try {
+			json = mapper.writeValueAsString(pathNodes);
+		} catch (JsonGenerationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (JsonMappingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+    	return json;	
+    	
+    }
+    
+    
 
     public Edge getClosestEdgeToVertex(Vertex vertex, int edgeIntervalStart, int edgeIntervalEnd) {
         int index = getIndexOfClosestEdgeToVertex(vertex, edgeIntervalStart, edgeIntervalEnd);

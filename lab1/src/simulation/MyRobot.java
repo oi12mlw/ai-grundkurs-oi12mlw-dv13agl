@@ -1,5 +1,6 @@
 package simulation;
 
+import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.PrintWriter;
 import java.util.ArrayList;
@@ -24,13 +25,15 @@ import given.*;
  */
 public class MyRobot {
 
-	private static final double LOOK_AHEAD_DISTANCE = 1;
-	private static final double SPEED = 1.1;
+	private static final double LOOK_AHEAD_DISTANCE = 1.0;
+	private static final double SPEED = 2.0;
 	private static final int SEGEMENTS_PER_IT = 100;
 	private static final int MAX_STEERING = 110;
 	private Path path;
+	private Path takenPath = new Path();
 	private RobotCommunication roboCom;
 	private Vertex position;
+	private double avgEdgeLength;
 
 	public MyRobot(String host, int port) {
 		this.position = Vertex.fromPosition(new Position(0, 0));
@@ -46,14 +49,13 @@ public class MyRobot {
 		PrintWriter pw = new PrintWriter("cps.txt", "UTF-8");
 		PrintWriter pw2 = new PrintWriter("robotPos.txt", "UTF-8");
 
-		Thread.sleep(3000);
-//		int edgeIntervalEnd = path.getEdges().size() / 20;
-//		double distanceTraveled = 0.0;
-//		double avgEdgeLength = path.avgEdgeLength();
+		// int edgeIntervalEnd = path.getEdges().size() / 20;
+		// double distanceTraveled = 0.0;
+		avgEdgeLength = path.avgEdgeLength();
 
 		LocalizationResponse r = new LocalizationResponse();
 		roboCom.getResponse(r);
-//		Vertex lastPosition = Vertex.fromPosition(getPosition(r));
+		// Vertex lastPosition = Vertex.fromPosition(getPosition(r));
 
 		boolean done = false;
 		while (!done) {
@@ -64,8 +66,8 @@ public class MyRobot {
 
 				position = Vertex.fromPosition(getPosition(r));
 
-				ArrayList<Edge> carrotPath = path
-						.getCarrotPathFrom(position, LOOK_AHEAD_DISTANCE, 0, 100);
+				ArrayList<Edge> carrotPath = path.getCarrotPathFrom(position,
+						LOOK_AHEAD_DISTANCE, 0, 100);
 				Vertex carrotPoint = carrotPath.get(carrotPath.size() - 1).end;
 				pw.println(String.format(Locale.US, "%f %f", carrotPoint.x,
 						carrotPoint.y));
@@ -90,35 +92,43 @@ public class MyRobot {
 				double distance = position.distanceTo(carrotPoint);
 
 				DifferentialDriveRequest dr = new DifferentialDriveRequest();
-				
-				
-				double speed = SPEED/Math.max(1, 1.4*Math.abs(Math.toRadians(errorAngle)));
-				double driveTime = distance / speed;
+
+				double speed = Math.max(1,
+						1.1 * Math.abs(Math.toRadians(errorAngle)));
+				if (Math.abs(errorAngle) > 120) {
+					speed = 0;
+					errorAngle *= 1.15;
+					
+				}else{
+					if (Math.abs(errorAngle) > 45){
+						errorAngle *= 1.35;
+					}
+				}
+				double driveTime = distance / SPEED;
 
 				dr.setLinearSpeed(speed);
-				System.out.println("the angle of doom ist: "+errorAngle);
 
-				dr.setAngularSpeed(Math.pow(Math.toRadians(errorAngle),1.7)/driveTime);
+
+				dr.setAngularSpeed(Math.toRadians(errorAngle) / driveTime);
 				roboCom.putRequest(dr);
 
-				Thread.sleep((long) (driveTime*550));
-//				dr.setAngularSpeed(0);
-//				dr.setLinearSpeed(0);
-//
-//				roboCom.putRequest(dr);
-//				Thread.sleep(100);
+				Thread.sleep((long) (driveTime * 350));
+				// dr.setAngularSpeed(0);
+				// dr.setLinearSpeed(0);
+				//
+				// roboCom.putRequest(dr);
+				// Thread.sleep(100);
 
-//				distanceTraveled = lastPosition.distanceTo(position);
-//				int edgesTraveled = (int) (distanceTraveled / avgEdgeLength);
-//				edgeIntervalEnd = edgesTraveled;
-//
-//				lastPosition = position;
-				
-				if(carrotPoint.equals(path.getEnd())) {
-					System.out.println("SIKTAR PÅ MÅL!");
-				}
-				
-				if(isAt(path.getEnd()) && carrotPoint.toPosition().equals(path.getEnd()) ) {
+				// distanceTraveled = lastPosition.distanceTo(position);
+				// int edgesTraveled = (int) (distanceTraveled / avgEdgeLength);
+				// edgeIntervalEnd = edgesTraveled;
+				//
+				// lastPosition = position;
+
+				boolean closeToFinish = path.getEnd().getDistanceTo(
+						carrotPoint.toPosition()) < path.avgEdgeLength() * 2;
+
+				if (isAt(path.getEnd()) && closeToFinish) {
 					done = true;
 					dr = new DifferentialDriveRequest();
 					dr.setAngularSpeed(0);
@@ -129,21 +139,18 @@ public class MyRobot {
 			} catch (Exception e) {
 				pw.close();
 				pw2.close();
-				e.printStackTrace();
+				done=true;
 			}
 
-					
 		}
-		
-		System.out.println("I MÅL!!! :D");
 
 		pw.close();
 		pw2.close();
 	}
 
 	private boolean isAt(Position end) {
-		
-		return position.toPosition().getDistanceTo(end) < path.avgEdgeLength() * 30;
+
+		return position.toPosition().getDistanceTo(end) < avgEdgeLength * 20;
 	}
 
 	private double getErrorAngle(Vertex carrotPoint, double orientation) {
@@ -179,6 +186,44 @@ public class MyRobot {
 		} catch (Exception e) {
 			return 0;
 		}
+
+	}
+
+	public void record() {
+		boolean running = true;
+
+		PrintWriter pw=null;
+		while (running) {
+			try {
+				LocalizationResponse r = new LocalizationResponse();
+				roboCom.getResponse(r); 
+				Position p1 = getPosition(r);
+				if(takenPath.getLastAddedVertex() != null) {
+					if(takenPath.getLastAddedVertex().toPosition().getDistanceTo(p1) > 0.01) {
+						takenPath.concatPath(new Vertex(p1.x, p1.y));
+					}
+				} else {
+					takenPath.concatPath(new Vertex(p1.x, p1.y));
+				}
+				
+					
+				Thread.sleep(20);
+
+			} catch (Exception e) {
+//				e.printStackTrace();
+				running = false;
+			}
+		}
+		try {
+			String json = takenPath.toJson();
+			pw = new PrintWriter("path.json");
+			pw.write(json);
+			pw.close();
+		} catch (FileNotFoundException e1) {
+			// TODO Auto-generated catch block
+			e1.printStackTrace();
+		}
+		
 
 	}
 

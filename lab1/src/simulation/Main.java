@@ -22,24 +22,42 @@ public class Main {
 	 */
 	public static void main(String[] args) throws Exception {
 
-		PathParser parser = new PathParser(args[0]);
-		PathNode[] pathNodes = parser.getPath();
-
-		Path path =  Path.fromPathNodes(pathNodes);
-
-		//writePath(path);
-		
+		//String pathFile = args[0];
+		String pathFile = "path.json";
 		MyRobot robot = new MyRobot("http://127.0.0.1", 50000);
-		robot.setPath(path);
 
-		Thread.sleep(3000);
+		Thread.sleep(2000);
+		
+		if(pathFile == null) {
+			recordPath(robot);	
+		} else {
+			run(robot, pathFile);	
+		}
+		
+				
+		
+	}
+
+	private static void run(MyRobot robot, String pathFile) throws Exception {
+		
+		System.out.println("RUNNING");
+		PathParser parser = new PathParser(pathFile);
+		PathNode[] pathNodes = parser.getPath();
+		Path path =  Path.fromPathNodes(pathNodes);
+		writePath(path);
+		robot.setPath(path);
 		double currentTime = System.nanoTime();
-		
 		robot.run();
-		
 		double elapsed = System.nanoTime() - currentTime;
 		
+		System.out.println("DONE");
 		System.out.println("Elapsed: " + elapsed / 1000000000);
+	}
+
+	private static void recordPath(MyRobot robot) {
+		System.out.println("RECORDING");
+		robot.record();
+		System.out.println("DONE");
 	}
 
 	private static void writePath(Path path) throws FileNotFoundException, UnsupportedEncodingException {
