@@ -65,7 +65,7 @@ public class MyRobot {
 				long driveTime = 50L;
 
 				if (Math.abs(errorAngle) > 110) {
-					linearSpeed = 0;
+					linearSpeed = 0.3;
 					driveTime += 1000;					
 				}				
 
@@ -147,7 +147,8 @@ public class MyRobot {
 
 	private boolean isAt(Position end) {
 
-		return position.toPosition().getDistanceTo(end) < avgEdgeLength * 10;
+		//return position.toPosition().getDistanceTo(end) < avgEdgeLength * 10;
+		return position.toPosition().getDistanceTo(end) < 1;
 	}
 
 	public void setMaxSpeed(double maxSpeed) {
