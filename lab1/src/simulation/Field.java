@@ -1,11 +1,7 @@
 package simulation;
 
-import geometry.Edge;
 import geometry.Vertex;
 
-import java.awt.*;
-import java.util.ArrayList;
-import java.util.concurrent.CopyOnWriteArrayList;
 
 /**
  * Created by marcus on 2015-09-19.

@@ -21,8 +21,8 @@ import given.*;
  */
 public class MyRobot {
 
-	private static final double LOOK_AHEAD_DISTANCE = 1.00;
-	private static final double SPEED = 3.0;
+	private double lookAheadDistance;
+	private double maxSpeed;
 	
 	private Path path;
 	private Path takenPath = new Path();
@@ -34,6 +34,8 @@ public class MyRobot {
 	public MyRobot(String host, int port) {
 		this.position = Vertex.fromPosition(new Position(0, 0));
 		roboCom = new RobotCommunication(host, port);
+		setLookAheadDistance(1.00);
+		setMaxSpeed(1.00);
 
 	}
 
@@ -43,7 +45,7 @@ public class MyRobot {
 		PrintWriter robotPathWriter = new PrintWriter("robotPos.txt", "UTF-8");
 
 		LocalizationResponse locResponse = new LocalizationResponse();
-		roboCom.getResponse(locResponse);
+		roboCom.getResponse(locResponse);	
 
 		boolean done = false;
 		while (!done) {
@@ -59,7 +61,7 @@ public class MyRobot {
 
 				double errorAngle = getErrorAngle(locResponse, carrotPoint);			
 				
-				double linearSpeed = SPEED;
+				double linearSpeed = maxSpeed;
 				long driveTime = 50L;
 
 				if (Math.abs(errorAngle) > 110) {
@@ -79,6 +81,7 @@ public class MyRobot {
 				}
 
 			} catch (Exception e) {
+				System.err.println("Communication error");
 				done = true;
 			}
 		}
@@ -129,7 +132,7 @@ public class MyRobot {
 	}
 
 	private Vertex getCarrotPoint() {
-		ArrayList<Edge> carrotPath = path.getCarrotPathFrom(position, LOOK_AHEAD_DISTANCE, 0, 100);
+		ArrayList<Edge> carrotPath = path.getCarrotPathFrom(position, lookAheadDistance, 0, 100);
 		Vertex carrotPoint = carrotPath.get(carrotPath.size() - 1).end;
 		return carrotPoint;
 	}
@@ -147,6 +150,14 @@ public class MyRobot {
 		return position.toPosition().getDistanceTo(end) < avgEdgeLength * 10;
 	}
 
+	public void setMaxSpeed(double maxSpeed) {
+		this.maxSpeed = maxSpeed;
+	}
+	
+	public void setLookAheadDistance(double lookAheadDistance) {
+		this.lookAheadDistance = lookAheadDistance;
+	}
+	
 	private Position getPosition(LocalizationResponse r) {
 
 		double[] posArray = r.getPosition();
@@ -175,7 +186,7 @@ public class MyRobot {
 
 	}
 
-	public void record() {
+	public void record(String pathName) {
 		boolean running = true;
 
 		PrintWriter pw=null;
@@ -202,13 +213,16 @@ public class MyRobot {
 		}
 		try {
 			String json = takenPath.toJson();
-			pw = new PrintWriter("path.json");
+			pw = new PrintWriter(pathName);
 			pw.write(json);
 			pw.close();
 		} catch (FileNotFoundException e1) {
 			// TODO Auto-generated catch block
 			e1.printStackTrace();
 		}
+		
+		System.err.println("DONE");
+		System.err.println("Recorded " + takenPath.getEdges().size() + 1 + " coordinates");
 		
 
 	}
